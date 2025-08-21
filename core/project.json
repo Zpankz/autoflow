@@ -1,0 +1,42 @@
+{
+  "name": "core",
+  "$schema": "../node_modules/nx/schemas/project-schema.json",
+  "projectType": "library",
+  "sourceRoot": "core",
+  "targets": {
+    "build": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "python -m build",
+        "cwd": "core"
+      }
+    },
+    "test": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "python -m pytest tests/ -v",
+        "cwd": "core"
+      }
+    },
+    "lint": {
+      "executor": "nx:run-commands",
+      "options": {
+        "commands": [
+          "python -m flake8 autoflow/",
+          "python -m black --check autoflow/",
+          "python -m mypy autoflow/"
+        ],
+        "cwd": "core",
+        "parallel": false
+      }
+    },
+    "format": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "python -m black autoflow/",
+        "cwd": "core"
+      }
+    }
+  },
+  "tags": ["type:library", "lang:python"]
+}

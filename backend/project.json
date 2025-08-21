@@ -1,0 +1,42 @@
+{
+  "name": "backend",
+  "$schema": "../node_modules/nx/schemas/project-schema.json",
+  "projectType": "application",
+  "sourceRoot": "backend",
+  "targets": {
+    "build": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "docker build -t autoflow-backend .",
+        "cwd": "backend"
+      }
+    },
+    "dev": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "python api_server.py",
+        "cwd": "backend"
+      }
+    },
+    "test": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "python -m pytest tests/ -v",
+        "cwd": "backend"
+      }
+    },
+    "lint": {
+      "executor": "nx:run-commands",
+      "options": {
+        "commands": [
+          "python -m flake8 app/",
+          "python -m black --check app/",
+          "python -m mypy app/"
+        ],
+        "cwd": "backend",
+        "parallel": false
+      }
+    }
+  },
+  "tags": ["type:application", "lang:python"]
+}

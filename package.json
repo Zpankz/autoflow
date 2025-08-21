@@ -1,0 +1,27 @@
+{
+  "name": "autoflow-workspace",
+  "version": "1.0.0",
+  "private": true,
+  "description": "AutoFlow - A unified storage layer for AI agents and RAG applications",
+  "license": "Apache-2.0",
+  "scripts": {
+    "nx": "./nx",
+    "dev": "nx run-many --target=dev --projects=frontend,backend",
+    "build": "nx run-many --target=build --projects=frontend,backend,core",
+    "test": "nx run-many --target=test --all",
+    "lint": "nx run-many --target=lint --all",
+    "graph": "nx graph",
+    "dep-graph": "nx dep-graph"
+  },
+  "devDependencies": {
+    "@nx/js": "21.4.0",
+    "@nx/workspace": "21.4.0",
+    "nx": "21.4.0"
+  },
+  "workspaces": [
+    "frontend",
+    "docs",
+    "e2e"
+  ],
+  "packageManager": "npm@latest"
+}
