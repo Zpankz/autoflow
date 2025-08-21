@@ -662,12 +662,70 @@ class TiDBGraphStore(GraphStore):
         embedding: Optional[Any] = None,
     ) -> Relationship:
         """
-        Create a relationship between two entities.
+        Enhanced relationship creation with weighting and symmetric handling.
+        
+        Phase 2 Enhancement: Implements relationship weighting based on semantic types
+        and confidence scores as defined in PRD Section 6.4. Automatically creates
+        symmetric relationships for appropriate types.
+        
+        Args:
+            source_entity: Source entity 
+            target_entity: Target entity
+            description: Relationship description
+            meta: Metadata including relationship_type and confidence
+            embedding: Pre-computed embedding (optional)
+            
+        Returns:
+            Created relationship with calculated weight
         """
         if isinstance(source_entity, UUID):
             source_entity = self.get_entity(source_entity)
         if isinstance(target_entity, UUID):
             target_entity = self.get_entity(target_entity)
+
+        # Enhanced Phase 2: Calculate relationship weight and handle typing
+        enhanced_meta = meta.copy() if meta else {}
+        
+        if self._config.enable_enhanced_kg and self._config.is_feature_enabled("typed_relationships"):
+            # Extract relationship type and confidence from metadata
+            relationship_type = enhanced_meta.get("relationship_type", "generic")
+            confidence = enhanced_meta.get("confidence", 0.8)
+            
+            # Validate confidence is within acceptable range
+            if confidence < self._config.min_relationship_confidence:
+                logger.debug(f"Skipping relationship with low confidence: {confidence}")
+                return None
+            
+            # Define semantic type weights (PRD Section 6.4)
+            type_weights = {
+                "hypernym": 1.0, "hyponym": 1.0,      # Strong taxonomic relationships
+                "meronym": 0.9, "holonym": 0.9,       # Strong structural relationships
+                "synonym": 0.95,                      # Very strong semantic equivalence
+                "antonym": 0.9,                       # Strong semantic opposition
+                "causal": 0.8,                        # Important functional relationships
+                "temporal": 0.7,                      # Moderate sequential relationships
+                "dependency": 0.85,                   # Important dependency relationships
+                "reference": 0.6,                     # Weaker citation relationships
+                "generic": 0.5                        # Default for untyped relationships
+            }
+            
+            # Calculate weight using formula: confidence × type_weight × 10 (0-10 scale)
+            base_weight = type_weights.get(relationship_type, 0.5)
+            calculated_weight = confidence * base_weight * 10
+            
+            # Update metadata with calculated values
+            enhanced_meta.update({
+                "relationship_type": relationship_type,
+                "confidence": confidence,
+                "weight": calculated_weight,
+                "calculated_by": "enhanced_kg_v1"
+            })
+            
+            logger.debug(f"Relationship weight calculated: {relationship_type} "
+                        f"({confidence:.2f} confidence) -> {calculated_weight:.2f}")
+        else:
+            # Legacy behavior: use default weight
+            calculated_weight = enhanced_meta.get("weight", 0.0)
 
         if embedding is None:
             embedding = self._get_relationship_embedding(
@@ -678,14 +736,51 @@ class TiDBGraphStore(GraphStore):
                 description,
             )
 
+        # Check for degree explosion prevention
+        if self._config.enable_enhanced_kg:
+            source_degree = self.calc_entity_degree(source_entity.id)
+            target_degree = self.calc_entity_degree(target_entity.id)
+            
+            if (source_degree >= self._config.max_edges_per_entity or 
+                target_degree >= self._config.max_edges_per_entity):
+                logger.warning(f"Preventing degree explosion: source_degree={source_degree}, "
+                             f"target_degree={target_degree}, max={self._config.max_edges_per_entity}")
+                return None
+
+        # Create the primary relationship
         relationship = self._relationship_db_model(
             source_entity_id=source_entity.id,
             target_entity_id=target_entity.id,
             description=description,
-            meta=meta,
+            meta=enhanced_meta,
             embedding=embedding,
+            weight=calculated_weight,
         )
-        return self._relationship_table.insert(relationship)
+        created_relationship = self._relationship_table.insert(relationship)
+        
+        # Phase 2 Enhancement: Create symmetric relationships for appropriate types
+        if (self._config.enable_enhanced_kg and 
+            self._config.is_feature_enabled("symmetric_relationships") and
+            enhanced_meta.get("relationship_type") in ["synonym", "antonym"]):
+            
+            logger.debug(f"Creating symmetric relationship for type: {enhanced_meta.get('relationship_type')}")
+            
+            # Create the inverse relationship
+            symmetric_meta = enhanced_meta.copy()
+            symmetric_meta["symmetric_of"] = str(created_relationship.id)
+            symmetric_meta["auto_generated"] = True
+            
+            symmetric_relationship = self._relationship_db_model(
+                source_entity_id=target_entity.id,  # Reversed
+                target_entity_id=source_entity.id,  # Reversed  
+                description=description,  # Same description
+                meta=symmetric_meta,
+                embedding=embedding,  # Same embedding
+                weight=calculated_weight,  # Same weight
+            )
+            self._relationship_table.insert(symmetric_relationship)
+        
+        return created_relationship
 
     def _get_relationship_embedding(
         self,
