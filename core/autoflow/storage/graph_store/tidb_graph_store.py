@@ -1,7 +1,11 @@
+import hashlib
 import logging
+import re
+import unicodedata
 from typing import Collection, Dict, List, Optional, Tuple, Type, Any
 from uuid import UUID
 
+from cachetools import LRUCache
 from pydantic import PrivateAttr
 from pytidb import Table, TiDBClient
 from pytidb.datatype import JSON, Text
@@ -16,6 +20,7 @@ from pytidb.sql import func, select, or_
 from pytidb.embeddings import EmbeddingFunction
 from sqlalchemy import Index
 
+from autoflow.configs.knowledge_graph import KnowledgeGraphConfig
 from autoflow.models.embedding_models import EmbeddingModel
 from autoflow.orms.base import UUIDBaseModel
 from autoflow.storage.graph_store.base import GraphStore
@@ -155,6 +160,8 @@ class TiDBGraphStore(GraphStore):
     _entity_table: Table = PrivateAttr()
     _relationship_db_model: Type[TableModel] = PrivateAttr()
     _relationship_table: Table = PrivateAttr()
+    _config: KnowledgeGraphConfig = PrivateAttr()
+    _entity_cache: Optional[LRUCache] = PrivateAttr(default=None)
 
     def __init__(
         self,
@@ -162,13 +169,33 @@ class TiDBGraphStore(GraphStore):
         namespace: Optional[str] = None,
         embedding_model: Optional[EmbeddingModel] = None,
         vector_dims: Optional[int] = None,
-        entity_distance_threshold: Optional[float] = 0.1,
+        entity_distance_threshold: Optional[float] = None,
+        config: Optional[KnowledgeGraphConfig] = None,
     ):
         super().__init__()
         self._db = client
         self._db_engine = client.db_engine
         self._embedding_model = embedding_model
-        self._entity_distance_threshold = entity_distance_threshold
+        
+        # Initialize configuration with backward compatibility
+        self._config = config or KnowledgeGraphConfig()
+        
+        # Set entity distance threshold from config or fallback to parameter/default
+        if entity_distance_threshold is not None:
+            # Use explicit parameter (backward compatibility)
+            self._entity_distance_threshold = entity_distance_threshold
+        else:
+            # Use configuration value
+            self._entity_distance_threshold = self._config.get_effective_threshold()
+        
+        # Initialize LRU entity cache if enhanced KG is enabled
+        if self._config.enable_enhanced_kg and self._config.canonicalization_enabled:
+            self._entity_cache = LRUCache(maxsize=self._config.entity_cache_size)
+            logger.info(f"Initialized entity cache with size: {self._config.entity_cache_size}")
+        else:
+            self._entity_cache = None
+            logger.debug("Entity cache disabled (enhanced KG not enabled)")
+        
         self._init_store(namespace, vector_dims)
 
     def _init_store(
@@ -183,6 +210,72 @@ class TiDBGraphStore(GraphStore):
         self._relationship_table = self._db.create_table(
             schema=self._relationship_db_model
         )
+
+    # Entity Normalization Utilities (Phase 1 Enhancement)
+    
+    def _normalize_entity_name(self, name: str) -> str:
+        """
+        Normalize entity names for improved deduplication.
+        
+        Implements the canonicalization process defined in PRD Section 6.3:
+        - Unicode normalization (NFKC)  
+        - Lowercase conversion
+        - Punctuation removal (except hyphens)
+        - Whitespace normalization
+        - Case preservation for special entities
+        
+        Args:
+            name: Raw entity name to normalize
+            
+        Returns:
+            Normalized entity name
+        """
+        if not self._config.enable_enhanced_kg or not self._config.canonicalization_enabled:
+            return name
+        
+        # Check if this entity should preserve its case
+        if name in self._config.preserve_case_entities:
+            # Apply minimal normalization while preserving case
+            normalized = unicodedata.normalize('NFKC', name.strip())
+            normalized = ' '.join(normalized.split())  # Normalize whitespace only
+            return normalized
+        
+        # Unicode normalization (NFKC) + lowercase + strip whitespace
+        normalized = unicodedata.normalize('NFKC', name.lower().strip())
+        
+        # Remove punctuation except hyphens; keep alphanumeric and spaces
+        normalized = re.sub(r'[^\w\s\-]', '', normalized)
+        
+        # Normalize internal whitespace to single space
+        normalized = ' '.join(normalized.split())
+        
+        return normalized
+    
+    def _get_canonical_id(self, name: str, description: str = "") -> str:
+        """
+        Generate canonical ID for entity deduplication.
+        
+        Creates content-based identifier using normalized name and description
+        context as defined in PRD Section 6.3. Enables robust entity matching
+        across different text representations.
+        
+        Args:
+            name: Entity name
+            description: Entity description for context
+            
+        Returns:
+            16-character hexadecimal canonical ID
+        """
+        if not self._config.enable_enhanced_kg:
+            return name  # Legacy behavior proxy
+        
+        canonical_name = self._normalize_entity_name(name)
+        
+        # Content-based ID using name and first 100 chars of description for context
+        content = f"{canonical_name}::{description[:100] if description else ''}"
+        
+        # Generate SHA-256 hash and take first 16 characters for ID
+        return hashlib.sha256(content.encode('utf-8')).hexdigest()[:16]
 
     # Entity Basic Operations
 
@@ -247,7 +340,23 @@ class TiDBGraphStore(GraphStore):
         return self._entity_table.insert(entity)
 
     def _get_entity_embedding(self, name: str, description: str) -> list[float]:
-        embedding_str = f"{name}: {description}"
+        """
+        Generate entity embedding, using normalized name if enhanced KG is enabled.
+        
+        Args:
+            name: Entity name
+            description: Entity description
+            
+        Returns:
+            Embedding vector for the entity
+        """
+        # Use normalized name for enhanced consistency if enabled
+        if self._config.enable_enhanced_kg and self._config.canonicalization_enabled:
+            normalized_name = self._normalize_entity_name(name)
+            embedding_str = f"{normalized_name}: {description}"
+        else:
+            embedding_str = f"{name}: {description}"
+            
         return self._embedding_model.get_text_embedding(embedding_str)
 
     def find_or_create_entity(
@@ -258,21 +367,87 @@ class TiDBGraphStore(GraphStore):
         meta: Optional[dict] = None,
         embedding: Optional[Any] = None,
     ) -> Entity:
-        query_embedding = self._get_entity_embedding(name, description)
+        """
+        Enhanced find or create entity with caching, normalization, and canonical ID integration.
+        
+        Implements Phase 1 enhancements as defined in PRD Section 5.1:
+        - Cache lookup before DB search (when enabled)
+        - Canonical ID-based deduplication
+        - Enhanced metadata storage with normalization info
+        - Improved similarity thresholds
+        
+        Args:
+            name: Entity name
+            entity_type: Type of entity
+            description: Entity description
+            meta: Additional metadata
+            embedding: Pre-computed embedding (optional)
+            
+        Returns:
+            Existing or newly created entity
+        """
+        # Generate canonical ID for enhanced deduplication
+        canonical_id = self._get_canonical_id(name, description or "")
+        normalized_name = self._normalize_entity_name(name)
+        
+        # Phase 1 Enhancement: Check entity cache first (if enabled)
+        if self._entity_cache is not None:
+            cached_entity = self._entity_cache.get(canonical_id)
+            if cached_entity is not None:
+                logger.debug(f"Cache hit for entity: {name} -> {cached_entity.name}")
+                return cached_entity
+        
+        # Generate query embedding (using normalized name for consistency)
+        query_embedding = self._get_entity_embedding(name, description or "")
         query = QueryBundle(query_embedding=query_embedding)
+        
+        # Search for existing entities with enhanced threshold
         nearest_entity = self.search_entities(
             query, top_k=1, distance_threshold=self._entity_distance_threshold
         )
+        
         if len(nearest_entity) != 0:
-            return nearest_entity[0][0]
+            found_entity = nearest_entity[0][0]
+            
+            # Update cache if enabled
+            if self._entity_cache is not None:
+                self._entity_cache[canonical_id] = found_entity
+                logger.debug(f"Cached existing entity: {name} -> {found_entity.name}")
+            
+            return found_entity
         else:
-            return self.create_entity(
+            # Create new entity with enhanced metadata
+            enhanced_meta = meta.copy() if meta else {}
+            
+            # Add canonicalization metadata if enhanced KG is enabled
+            if self._config.enable_enhanced_kg:
+                enhanced_meta.update({
+                    "canonical_id": canonical_id,
+                    "normalized_name": normalized_name,
+                    "original_name": name,  # Preserve original for reference
+                })
+                
+                # Track aliases if different from normalized
+                if normalized_name != name:
+                    aliases = enhanced_meta.get("aliases", [])
+                    if name not in aliases:
+                        aliases.append(name)
+                    enhanced_meta["aliases"] = aliases
+            
+            created_entity = self.create_entity(
                 name=name,
                 entity_type=entity_type,
                 description=description,
-                meta=meta,
+                meta=enhanced_meta,
                 embedding=embedding,
             )
+            
+            # Update cache if enabled
+            if self._entity_cache is not None:
+                self._entity_cache[canonical_id] = created_entity
+                logger.debug(f"Cached new entity: {name} -> {canonical_id}")
+            
+            return created_entity
 
     def update_entity(self, entity: Entity | UUID, update: EntityUpdate) -> Entity:
         if isinstance(entity, UUID):
