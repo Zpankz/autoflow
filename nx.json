@@ -8,31 +8,53 @@
     }
   },
   "namedInputs": {
-    "default": ["{projectRoot}/**/*", "sharedGlobals"],
-    "production": ["default", "!{projectRoot}/**/*.spec.{js,ts}", "!{projectRoot}/tsconfig.spec.json"],
-    "sharedGlobals": ["{workspaceRoot}/.github/**/*"]
+    "default": [
+      "{projectRoot}/**/*",
+      "sharedGlobals"
+    ],
+    "production": [
+      "default",
+      "!{projectRoot}/**/*.spec.{js,ts}",
+      "!{projectRoot}/tsconfig.spec.json"
+    ],
+    "sharedGlobals": [
+      "{workspaceRoot}/.github/**/*"
+    ]
   },
   "targetDefaults": {
     "build": {
-      "dependsOn": ["^build"],
-      "inputs": ["production", "^production"],
+      "dependsOn": [
+        "^build"
+      ],
+      "inputs": [
+        "production",
+        "^production"
+      ],
       "cache": true
     },
     "test": {
-      "inputs": ["default", "^production", "{workspaceRoot}/jest.preset.js"],
+      "inputs": [
+        "default",
+        "^production",
+        "{workspaceRoot}/jest.preset.js"
+      ],
       "cache": true
     },
     "lint": {
-      "inputs": ["default", "{workspaceRoot}/.eslintrc.json"],
+      "inputs": [
+        "default",
+        "{workspaceRoot}/.eslintrc.json"
+      ],
       "cache": true
     }
   },
   "projects": {
     "frontend": "frontend",
-    "backend": "backend", 
+    "backend": "backend",
     "core": "core",
     "docs": "docs",
     "e2e": "e2e"
   },
-  "defaultBase": "main"
+  "defaultBase": "main",
+  "nxCloudId": "68a6c659b51b57372b7d0a57"
 }
