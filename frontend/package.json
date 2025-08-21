@@ -13,6 +13,10 @@
     "verify": "pnpm run test && pnpm run build && pnpm run build:widget-react"
   },
   "packageManager": "pnpm@9.15.0",
+  "nx": {
+    "name": "tidb-ai-parent",
+    "implicitDependencies": ["backend"]
+  },
   "pnpm": {
     "patchedDependencies": {
       "jest-runtime@29.7.0": "patches/jest-runtime@29.7.0.patch",

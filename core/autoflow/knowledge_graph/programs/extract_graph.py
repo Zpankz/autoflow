@@ -120,43 +120,14 @@ class PredictKnowledgeGraph(BaseModel):
 
 
 class ExtractKnowledgeGraph(dspy.Signature):
-    """Carefully analyze the provided text from medical literature, pharmacology references, and critical care guidelines to thoroughly identify all entities related to biophysical pharmacophysiology, including both general concepts and specific clinical details.
+    """Extract medical entities and relationships from clinical text.
 
-    Follow these Step-by-Step Analysis:
-
-    1. Extract Meaningful Entities with Enhanced Metadata:
-      - Identify all significant nouns, proper nouns, and technical terminologies that represent medical concepts, pharmacological agents, physiological processes, clinical procedures, pathophysiological mechanisms, treatment protocols, dosing regimens, monitoring parameters, or any substantial clinical entities.
-      - Ensure that you capture entities across different levels of detail, from high-level pathophysiological overviews to specific pharmacokinetic parameters and dosing specifications, to create a comprehensive representation of the clinical subject matter.
-      - Choose names for entities that are specific enough to indicate their meaning without additional context, avoiding overly generic terms.
-      - Consolidate similar entities to avoid redundancy, ensuring each represents a distinct concept at appropriate granularity levels.
-      - For each entity, extract relevant metadata including entity type (drug, receptor, pathway, condition, procedure, biomarker, etc.) and other structured clinical attributes such as therapeutic class, mechanism of action, dosing parameters, contraindications, or monitoring requirements.
-
-    2. Establish Typed Relationships with Confidence Scores:
-      - Carefully examine the text to identify all relationships between clearly-related entities, ensuring each relationship is correctly captured with accurate details about the interactions.
-      - Analyze the context and interactions between the identified entities to determine how they are interconnected, focusing on actions, associations, dependencies, or similarities.
-      - Clearly define the relationships, ensuring accurate directionality that reflects the logical or functional dependencies among entities.
-      - Classify each relationship using semantic types:
-        * 'hypernym' - broader concept (e.g., "Vasopressor" is hypernym of "Norepinephrine")
-        * 'hyponym' - narrower concept (e.g., "Alpha-1 Agonist" is hyponym of "Adrenergic Agonist") 
-        * 'meronym' - part-of relationship (e.g., "Cardiac Output" is meronym of "Hemodynamic Status")
-        * 'holonym' - has-part relationship (e.g., "Cardiovascular System" is holonym of "Myocardium")
-        * 'synonym' - equivalent concepts (e.g., "Epinephrine" synonym "Adrenaline")
-        * 'antonym' - opposite concepts (e.g., "Vasodilation" antonym "Vasoconstriction")
-        * 'causal' - cause-effect relationships (e.g., "Sepsis" causes "Hypotension")
-        * 'temporal' - time-based relationships (e.g., "Fluid Resuscitation" before "Vasopressor Initiation")
-        * 'dependency' - requires/depends-on (e.g., "Invasive Monitoring" depends on "Central Venous Access")
-        * 'reference' - mentioned-in/cites (e.g., "Clinical Guidelines" references "Dosing Protocol")
-        * 'generic' - other relationships not fitting above categories
-      - Assign confidence scores (0.0-1.0) based on text clarity: 0.9+ for explicit statements, 0.7-0.8 for clear implications, 0.5-0.6 for inferences.
-
-    3. Unified Extraction:
-      - Extract both entities with their metadata AND relationships with types/confidence in a single comprehensive analysis.
-      - Ensure all extracted information is factual and verifiable within the text itself.
-      - Cross-reference entities and relationships to maintain consistency and accuracy.
-
-    Objective: Produce a detailed and comprehensive knowledge graph that captures clinical entities with rich pharmacological metadata and semantically typed relationships with confidence scores, enabling high-quality medical knowledge graph construction and retrieval for critical care applications.
-
-    Please only response in JSON format.
+    Extract entities: name, description, type (drug/receptor/pathway/condition/procedure/biomarker)
+    Extract relationships: source_entity, target_entity, description, type, confidence (0.0-1.0)
+    
+    Relationship types: hypernym, hyponym, meronym, holonym, synonym, antonym, causal, temporal, dependency, reference, generic
+    
+    Return valid JSON with entities and relationships arrays.
     """
 
     text = dspy.InputField(

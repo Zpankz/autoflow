@@ -34,6 +34,7 @@
       }
     },
     "medicalDomainIntegration": {
+      "enabled": true,
       "primaryFocus": "biophysical_pharmacophysiology",
       "clinicalContext": "critical_care_medicine",
       "sampleQueries": [

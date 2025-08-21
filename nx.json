@@ -17,23 +17,29 @@
     "build": {
       "dependsOn": ["^build"],
       "inputs": ["production", "^production"],
+      "outputs": ["{projectRoot}/dist", "{projectRoot}/build"],
       "cache": true
     },
     "test": {
+      "dependsOn": ["build"],
       "inputs": ["default", "^production", "{workspaceRoot}/jest.preset.js"],
       "cache": true
     },
     "lint": {
       "inputs": ["default", "{workspaceRoot}/.eslintrc.json"],
       "cache": true
+    },
+    "dev": {
+      "dependsOn": ["^build"],
+      "cache": false
     }
   },
   "projects": {
-    "frontend": "frontend",
+    "tidb-ai-parent": "frontend",
     "backend": "backend", 
     "core": "core",
-    "docs": "docs",
-    "e2e": "e2e"
+    "example-docs": "docs",
+    "tidb.ai-playwright": "e2e"
   },
   "defaultBase": "main"
 }

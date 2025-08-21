@@ -7,9 +7,12 @@
     "build": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "python -m build",
+        "command": "pip install build && python -m build",
         "cwd": "core"
-      }
+      },
+      "inputs": ["production", "^production"],
+      "outputs": ["{projectRoot}/dist"],
+      "cache": true
     },
     "test": {
       "executor": "nx:run-commands",

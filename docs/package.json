@@ -2,6 +2,10 @@
   "name": "example-docs",
   "license": "MIT",
   "private": true,
+  "nx": {
+    "name": "example-docs",
+    "implicitDependencies": ["core", "backend"]
+  },
   "scripts": {
     "build": "next build",
     "dev": "next --turbopack",

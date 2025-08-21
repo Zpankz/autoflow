@@ -1,0 +1,43 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    gcc \
+    g++ \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Python dependencies for benchmarking
+RUN pip install --no-cache-dir \
+    pandas>=1.5.0 \
+    sqlalchemy>=2.0.0 \
+    pydantic>=2.0.0 \
+    cachetools>=5.0.0 \
+    click>=8.0.0 \
+    tqdm>=4.64.0 \
+    matplotlib>=3.6.0 \
+    seaborn>=0.12.0
+
+# Copy the core autoflow library
+COPY core/ /app/core/
+COPY backend/app/core/ /app/backend_core/
+
+# Copy medical fixtures and benchmark scripts
+COPY core/examples/medical_fixtures/ /app/fixtures/
+COPY core/examples/kg_benchmark.py /app/
+COPY medical-kg-config.json /app/
+
+# Create results directory
+RUN mkdir -p /app/results
+
+# Environment for medical benchmarking
+ENV PYTHONPATH="/app/core:/app/backend_core"
+ENV BENCHMARK_MODE=medical
+ENV MEDICAL_DOMAIN=critical_care
+ENV LOG_LEVEL=INFO
+
+# Default command
+CMD ["python", "kg_benchmark.py", "--corpus-path", "/app/fixtures", "--output", "/app/results/benchmark_results.json"]

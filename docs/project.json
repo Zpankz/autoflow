@@ -1,0 +1,39 @@
+{
+  "name": "example-docs",
+  "$schema": "../node_modules/nx/schemas/project-schema.json",
+  "projectType": "application",
+  "sourceRoot": "docs/src",
+  "targets": {
+    "build": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "pnpm run build",
+        "cwd": "docs"
+      },
+      "dependsOn": ["^build"],
+      "inputs": ["production", "^production"],
+      "outputs": ["{projectRoot}/dist", "{projectRoot}/.next"],
+      "cache": true
+    },
+    "dev": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "pnpm run dev",
+        "cwd": "docs"
+      },
+      "dependsOn": ["^build"],
+      "cache": false
+    },
+    "postbuild": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "pnpm run postbuild",
+        "cwd": "docs"
+      },
+      "dependsOn": ["build"],
+      "cache": true
+    }
+  },
+  "tags": ["type:application", "lang:typescript", "framework:nextjs"],
+  "implicitDependencies": ["core", "backend"]
+}

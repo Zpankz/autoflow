@@ -1,0 +1,97 @@
+FROM node:20-alpine AS base
+
+# 1. Install dependencies only when needed
+FROM base AS deps
+# Check https://github.com/nodejs/docker-node/tree/b4117f9333da4138b03a546ec926ef50a31506c3#nodealpine to understand why libc6-compat might be needed.
+RUN apk add --no-cache libc6-compat
+
+WORKDIR /autoflow
+
+RUN mkdir -p frontend/patches
+RUN mkdir -p frontend/app
+RUN mkdir -p frontend/packages/widget-react
+
+# Install dependencies based on the preferred package manager
+COPY frontend/package.json ./frontend
+COPY frontend/pnpm-*.yaml ./frontend
+COPY frontend/patches/* ./frontend/patches
+COPY frontend/app/package.json ./frontend/app
+COPY frontend/packages/widget-react/package.json ./frontend/packages/widget-react
+
+# Copy enhanced package.json with graph visualization dependencies
+COPY package.json ./
+COPY package-lock.json ./
+
+WORKDIR /autoflow/frontend
+
+RUN npm install -g corepack@latest
+RUN corepack enable pnpm
+RUN pnpm i --frozen-lockfile
+
+# Install graph visualization dependencies for medical KG
+WORKDIR /autoflow
+RUN npm install d3@^7.9.0 cytoscape@^3.30.3
+
+# 2. Rebuild the source code only when needed
+FROM base AS builder
+# Need git client to fetch git revision info
+RUN apk add --no-cache git
+WORKDIR /autoflow
+COPY --from=deps /autoflow/frontend/node_modules ./frontend/node_modules
+COPY --from=deps /autoflow/frontend/app/node_modules ./frontend/app/node_modules
+COPY --from=deps /autoflow/frontend/packages/widget-react/node_modules ./frontend/packages/widget-react/node_modules
+COPY --from=deps /autoflow/node_modules ./node_modules
+
+# Copy all source including medical enhancements
+COPY . .
+
+# Copy medical content and sample questions
+COPY medical-sample-questions.json ./frontend/app/public/
+COPY frontend/app/public/medical-chats.mock.txt ./frontend/app/public/
+
+WORKDIR /autoflow/frontend
+
+ENV BASE_URL=""
+ENV SITE_URL=""
+ENV MEDICAL_KNOWLEDGE_MODE=true
+
+RUN rm -f app/.env
+RUN echo BASE_URL=${BASE_URL:-'""'} >> app/.env.production
+RUN echo MEDICAL_KNOWLEDGE_MODE=${MEDICAL_KNOWLEDGE_MODE:-'true'} >> app/.env.production
+
+RUN npm install -g corepack@latest
+RUN corepack enable pnpm
+RUN pnpm run build:docker
+RUN pnpm run build:widget-react
+
+# 3. Production image, copy all the files and run next
+FROM base AS runner
+WORKDIR /autoflow
+
+ENV NODE_ENV=production
+ENV PORT=3000
+ENV HOSTNAME=0.0.0.0
+ENV MEDICAL_KNOWLEDGE_MODE=true
+
+RUN addgroup -g 1001 -S nodejs
+RUN adduser -S nextjs -u 1001
+
+# Automatically leverage output traces to reduce image size
+# https://nextjs.org/docs/advanced-features/output-file-tracing
+COPY --from=builder --chown=nextjs:nodejs /autoflow/frontend/app/.next/standalone .
+COPY --from=builder --chown=nextjs:nodejs /autoflow/frontend/app/.next/static app/.next/static
+COPY --from=builder /autoflow/frontend/app/public app/public
+
+# Copy medical content
+COPY --from=builder /autoflow/medical-sample-questions.json app/public/
+COPY --from=builder /autoflow/core/examples/medical_fixtures/ app/medical_fixtures/
+
+USER nextjs
+
+EXPOSE 3000
+
+# Healthcheck for medical knowledge frontend
+HEALTHCHECK --interval=30s --timeout=10s --start-period=20s --retries=3 \
+  CMD wget --no-verbose --tries=1 --spider http://localhost:3000/healthz || exit 1
+
+CMD ["node", "app/server.js"]

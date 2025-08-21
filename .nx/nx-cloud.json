@@ -1,0 +1,8 @@
+{
+  "cacheDirectory": ".nx/cache",
+  "distributedExecutionEnabled": false,
+  "accessToken": null,
+  "url": "https://cloud.nx.app",
+  "enableSharedCache": true,
+  "enableDistributedTaskExecution": false
+}

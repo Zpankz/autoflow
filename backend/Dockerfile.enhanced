@@ -1,0 +1,62 @@
+FROM ghcr.io/astral-sh/uv:python3.11-bookworm-slim
+
+WORKDIR /app/
+
+# Setup supervisord.
+RUN apt-get update && apt-get install -y supervisor gcc
+
+COPY supervisord.conf /usr/etc/supervisord.conf
+
+# Install dependencies including KG enhancements.
+COPY uv.lock /app/uv.lock
+COPY pyproject.toml /app/pyproject.toml
+
+# Add enhanced dependencies for KG processing
+RUN echo "cachetools>=5.0.0" >> requirements-kg.txt && \
+    echo "concurrent-futures>=3.1.1" >> requirements-kg.txt && \
+    echo "unicodedata2>=15.0.0" >> requirements-kg.txt
+
+RUN PYTHONDONTWRITEBYTECODE=1 uv sync --frozen
+ENV PATH="/app/.venv/bin:$PATH"
+
+# Install additional KG enhancement dependencies
+RUN pip install cachetools>=5.0.0
+
+# Pre-download playwright dependencies.
+RUN playwright install --with-deps chromium
+
+# Pre-download nltk data with medical corpus support.
+RUN python -c 'import nltk; \
+download_dir = "/usr/local/lib/python3.11/site-packages/llama_index/core/_static/nltk_cache";\
+nltk.download("stopwords", download_dir=download_dir);\
+nltk.download("punkt", download_dir=download_dir);\
+nltk.download("vader_lexicon", download_dir=download_dir);\
+nltk.download("wordnet", download_dir=download_dir);'
+
+ENV PYTHONPATH=/app
+
+COPY . /app/
+
+# Create medical knowledge fixtures directory
+RUN mkdir -p /app/medical_fixtures
+COPY ../core/examples/medical_fixtures/ /app/medical_fixtures/
+
+# Default number of workers (enhanced for KG processing)
+ENV WEB_CONCURRENCY=6
+
+# KG Enhancement Environment Variables
+ENV ENABLE_ENHANCED_KG=true
+ENV KG_ENTITY_DISTANCE_THRESHOLD=0.85
+ENV ENTITY_CACHE_SIZE=2000
+ENV KG_MEDICAL_DOMAIN=true
+
+# Medical Knowledge Graph Configuration
+ENV MEDICAL_ABBREVIATIONS_PRESERVE=true
+ENV PARALLEL_KG_PROCESSING=true
+ENV MAX_KG_WORKERS=8
+
+# Healthcheck for enhanced backend
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+  CMD curl -f http://localhost/healthz || exit 1
+
+CMD ["sh", "-c", "fastapi run app/api_server.py --host 0.0.0.0 --port 80 --workers ${WEB_CONCURRENCY}"]

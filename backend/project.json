@@ -9,7 +9,11 @@
       "options": {
         "command": "docker build -t autoflow-backend .",
         "cwd": "backend"
-      }
+      },
+      "dependsOn": ["^build"],
+      "inputs": ["production", "^production", "{workspaceRoot}/Dockerfile"],
+      "outputs": ["{options.outputPath}"],
+      "cache": true
     },
     "dev": {
       "executor": "nx:run-commands",
@@ -38,6 +42,7 @@
       }
     }
   },
-  "tags": ["type:application", "lang:python"]
+  "tags": ["type:application", "lang:python"],
+  "implicitDependencies": ["core"]
 }
 

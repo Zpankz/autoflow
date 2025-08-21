@@ -51,6 +51,8 @@ def get_dynamic_chunk_model(
     )
 
     class Chunk(UUIDBaseModel, UpdatableBaseModel):
+    model_config = ConfigDict(use_enum_values=True)
+
         hash: str = Field(max_length=64)
         text: str = Field(sa_column=Column(Text))
         meta: dict = Field(default={}, sa_column=Column(JSON))

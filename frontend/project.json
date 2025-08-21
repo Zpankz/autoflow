@@ -1,0 +1,40 @@
+{
+  "name": "tidb-ai-parent",
+  "$schema": "../node_modules/nx/schemas/project-schema.json",
+  "projectType": "application",
+  "sourceRoot": "frontend",
+  "targets": {
+    "build": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "pnpm run build",
+        "cwd": "frontend"
+      },
+      "dependsOn": ["^build"],
+      "inputs": ["production", "^production"],
+      "outputs": ["{projectRoot}/dist", "{projectRoot}/.next"],
+      "cache": true
+    },
+    "dev": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "pnpm run dev",
+        "cwd": "frontend"
+      },
+      "dependsOn": ["^build"],
+      "cache": false
+    },
+    "test": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "pnpm run test",
+        "cwd": "frontend"
+      },
+      "dependsOn": ["build"],
+      "inputs": ["default", "^production"],
+      "cache": true
+    }
+  },
+  "tags": ["type:application", "lang:typescript"],
+  "implicitDependencies": ["backend"]
+}

@@ -1,0 +1,229 @@
+name: autoflow-medical-kg
+
+services:
+  redis:
+    image: redis:7-alpine
+    restart: always
+    volumes:
+      - ./redis-data:/data
+    command: ["redis-server", "--loglevel", "warning", "--maxmemory", "256mb", "--maxmemory-policy", "allkeys-lru"]
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - autoflow-medical
+
+  backend-enhanced:
+    build:
+      context: backend
+      dockerfile: Dockerfile.enhanced
+      args:
+        BUILDKIT_INLINE_CACHE: 1
+    restart: always
+    depends_on:
+      redis:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:8000:80"
+    env_file:
+      - .env
+    environment:
+      # Enhanced KG Environment Variables
+      - ENABLE_ENHANCED_KG=true
+      - KG_ENTITY_DISTANCE_THRESHOLD=0.85
+      - ENTITY_CACHE_SIZE=2000
+      - KG_MEDICAL_DOMAIN=true
+      - MEDICAL_ABBREVIATIONS_PRESERVE=true
+      - PARALLEL_KG_PROCESSING=true
+      - MAX_KG_WORKERS=8
+      # Performance optimizations
+      - WEB_CONCURRENCY=6
+      - WORKER_TIMEOUT=300
+    volumes:
+      - ./data:/shared/data
+      - ./core/examples/medical_fixtures:/app/medical_fixtures:ro
+      - ./medical-kg-config.json:/app/medical-kg-config.json:ro
+    networks:
+      - autoflow-medical
+    logging:
+      driver: json-file
+      options:
+        max-size: "100m"
+        max-file: "10"
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 4G
+        reservations:
+          cpus: '1.0'
+          memory: 2G
+
+  frontend-enhanced:
+    build:
+      context: .
+      dockerfile: ./frontend/Dockerfile.enhanced
+      args:
+        BUILDKIT_INLINE_CACHE: 1
+    restart: always
+    depends_on:
+      - backend-enhanced
+    ports:
+      - "127.0.0.1:3000:3000"
+    environment:
+      - BASE_URL=http://backend-enhanced
+      - MEDICAL_KNOWLEDGE_MODE=true
+      - GRAPH_VISUALIZATION_ENHANCED=true
+    networks:
+      - autoflow-medical
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "6"
+
+  background-enhanced:
+    build:
+      context: backend
+      dockerfile: Dockerfile.enhanced
+      args:
+        BUILDKIT_INLINE_CACHE: 1
+    restart: always
+    depends_on:
+      redis:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:5555:5555"
+    env_file:
+      - .env
+    environment:
+      # Enhanced KG Background Processing
+      - ENABLE_ENHANCED_KG=true
+      - KG_ENTITY_DISTANCE_THRESHOLD=0.85
+      - ENTITY_CACHE_SIZE=2000
+      - PARALLEL_KG_PROCESSING=true
+      - MAX_KG_WORKERS=12
+      - CELERY_CONCURRENCY=8
+      - MEDICAL_PROCESSING_ENABLED=true
+    volumes:
+      - ./data:/shared/data
+      - ./core/examples/medical_fixtures:/app/medical_fixtures:ro
+      - ./medical-kg-config.json:/app/medical-kg-config.json:ro
+    command: /usr/bin/supervisord
+    networks:
+      - autoflow-medical
+    logging:
+      driver: json-file
+      options:
+        max-size: "100m"
+        max-file: "10"
+    deploy:
+      resources:
+        limits:
+          cpus: '4.0'
+          memory: 8G
+        reservations:
+          cpus: '2.0'
+          memory: 4G
+
+  medical-embedding-service:
+    image: tidbai/local-embedding-reranker:v4-with-cache
+    ports:
+      - "5001:5001"
+    environment:
+      - PRE_LOAD_DEFAULT_EMBEDDING_MODEL=true
+      - PRE_LOAD_DEFAULT_RERANKER_MODEL=true
+      - TRANSFORMERS_OFFLINE=1
+      - MEDICAL_DOMAIN_OPTIMIZATION=true
+      - CACHE_SIZE=2048
+    volumes:
+      - ./medical-models:/app/models
+    networks:
+      - autoflow-medical
+    profiles:
+      - local-embedding-reranker
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 6G
+        reservations:
+          cpus: '1.0'
+          memory: 3G
+
+  # Medical Knowledge Graph Database (if using separate DB)
+  medical-kg-db:
+    image: pingcap/tidb:v7.5.0
+    ports:
+      - "4001:4000"
+    environment:
+      - TIDB_MODE=local
+      - TIDB_LOG_LEVEL=info
+    volumes:
+      - ./medical-kg-data:/var/lib/tidb
+    networks:
+      - autoflow-medical
+    profiles:
+      - separate-db
+    command: >
+      /tidb-server
+      --store=mocktikv
+      --path="/var/lib/tidb"
+      --log-level=info
+      --host=0.0.0.0
+
+  # Knowledge Graph Benchmark Service
+  kg-benchmark:
+    build:
+      context: .
+      dockerfile: ./docker/Dockerfile.benchmark
+    volumes:
+      - ./core/examples/medical_fixtures:/app/fixtures:ro
+      - ./benchmark-results:/app/results
+    env_file:
+      - .env
+    environment:
+      - BENCHMARK_MODE=medical
+      - CORPUS_PATH=/app/fixtures
+    networks:
+      - autoflow-medical
+    profiles:
+      - benchmark
+    command: python core/examples/kg_benchmark.py --corpus-path /app/fixtures
+
+networks:
+  autoflow-medical:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+
+volumes:
+  redis-data:
+    driver: local
+  medical-kg-data:
+    driver: local
+  medical-models:
+    driver: local
+
+# Enhanced health monitoring
+x-healthcheck-defaults: &healthcheck-defaults
+  interval: 30s
+  timeout: 10s
+  start_period: 40s
+  retries: 3
+
+# Resource constraints for medical processing
+x-medical-resources: &medical-resources
+  deploy:
+    resources:
+      limits:
+        cpus: '2.0'
+        memory: 4G
+      reservations:
+        cpus: '1.0'
+        memory: 2G

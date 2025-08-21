@@ -1,30 +1,26 @@
 {
   "name": "autoflow-workspace",
   "version": "1.0.0",
+  "description": "AutoFlow AI - Knowledge Graph RAG Framework Workspace",
   "private": true,
-  "description": "AutoFlow - A unified storage layer for AI agents and RAG applications",
-  "license": "Apache-2.0",
   "scripts": {
-    "nx": "./nx",
-    "dev": "nx run-many --target=dev --projects=frontend,backend",
-    "build": "nx run-many --target=build --projects=frontend,backend,core",
-    "test": "nx run-many --target=test --all",
+    "nx": "nx",
+    "build": "./scripts/nx-commands.sh build",
+    "dev": "./scripts/nx-commands.sh dev",
+    "test": "./scripts/nx-commands.sh test",
+    "affected:build": "./scripts/nx-commands.sh affected:build",
+    "affected:test": "./scripts/nx-commands.sh affected:test",
+    "graph": "./scripts/nx-commands.sh graph",
+    "affected:graph": "./scripts/nx-commands.sh affected:graph",
+    "clear-cache": "./scripts/nx-commands.sh clear-cache",
+    "cache-stats": "./scripts/nx-commands.sh cache-stats",
     "lint": "nx run-many --target=lint --all",
-    "graph": "nx graph",
-    "dep-graph": "nx dep-graph"
+    "format": "nx run-many --target=format --all"
   },
   "devDependencies": {
+    "nx": "21.4.0",
     "@nx/js": "21.4.0",
     "@nx/workspace": "21.4.0",
-    "nx": "21.4.0",
-    "d3": "^7.9.0",
-    "cytoscape": "^3.30.3",
     "@nx/devkit": "21.4.0"
-  },
-  "workspaces": [
-    "frontend",
-    "docs",
-    "e2e"
-  ],
-  "packageManager": "npm@latest"
+  }
 }

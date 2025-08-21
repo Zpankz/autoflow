@@ -6,6 +6,10 @@
   "author": "",
   "license": "ISC",
   "description": "",
+  "nx": {
+    "name": "tidb.ai-playwright",
+    "implicitDependencies": ["tidb-ai-parent", "backend", "example-docs"]
+  },
   "devDependencies": {
     "@playwright/test": "^1.46.0",
     "@types/node": "^22.2.0"
