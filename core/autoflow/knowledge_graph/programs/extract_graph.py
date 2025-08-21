@@ -23,23 +23,23 @@ class PredictEntity(BaseModel):
     description: str = Field(
         description=(
             "Description of the entity, it should be a complete and comprehensive sentence, not few words. "
-            "Sample description of entity 'TiDB in-place upgrade': "
-            "'Upgrade TiDB component binary files to achieve upgrade, generally use rolling upgrade method'"
+            "Sample description of entity 'Norepinephrine in septic shock': "
+            "'First-line vasopressor agent used to restore vascular tone and improve mean arterial pressure in distributive shock states'"
         )
     )
     entity_type: Optional[str] = Field(
         default="concept",
         description=(
-            "Type or category of the entity. Examples: 'component', 'feature', 'process', 'tool', "
-            "'concept', 'configuration', 'protocol', 'algorithm', 'service'"
+            "Type or category of the clinical entity. Examples: 'drug', 'receptor', 'pathway', 'condition', "
+            "'procedure', 'biomarker', 'protocol', 'mechanism', 'monitoring_parameter', 'therapeutic_target'"
         )
     )
     metadata: Optional[Dict[str, Any]] = Field(
         default_factory=dict,
         description=(
             "Additional structured metadata about the entity as a JSON object. "
-            "Include topic classification, technical properties, version info, or other relevant attributes. "
-            "Example: {'topic': 'storage', 'type': 'distributed_database', 'supports_transactions': true}"
+            "Include clinical classification, pharmacological properties, dosing info, or other relevant clinical attributes. "
+            "Example: {'therapeutic_class': 'vasopressor', 'mechanism': 'alpha_adrenergic_agonist', 'onset_minutes': 1, 'half_life_minutes': 2}"
         )
     )
 
@@ -56,7 +56,7 @@ class PredictRelationship(BaseModel):
     relationship_desc: str = Field(
         description=(
             "Description of the relationship, it should be a complete and comprehensive sentence, not few words. "
-            "For example: 'TiDB will release a new LTS version every 6 months.'"
+            "For example: 'Norepinephrine activates alpha-1 adrenergic receptors leading to peripheral vasoconstriction and increased systemic vascular resistance.'"
         )
     )
     relationship_type: str = Field(
@@ -120,32 +120,32 @@ class PredictKnowledgeGraph(BaseModel):
 
 
 class ExtractKnowledgeGraph(dspy.Signature):
-    """Carefully analyze the provided text from database documentation and community blogs to thoroughly identify all entities related to database technologies, including both general concepts and specific details.
+    """Carefully analyze the provided text from medical literature, pharmacology references, and critical care guidelines to thoroughly identify all entities related to biophysical pharmacophysiology, including both general concepts and specific clinical details.
 
     Follow these Step-by-Step Analysis:
 
     1. Extract Meaningful Entities with Enhanced Metadata:
-      - Identify all significant nouns, proper nouns, and technical terminologies that represent database-related concepts, objects, components, features, issues, key steps, execute order, user case, locations, versions, or any substantial entities.
-      - Ensure that you capture entities across different levels of detail, from high-level overviews to specific technical specifications, to create a comprehensive representation of the subject matter.
+      - Identify all significant nouns, proper nouns, and technical terminologies that represent medical concepts, pharmacological agents, physiological processes, clinical procedures, pathophysiological mechanisms, treatment protocols, dosing regimens, monitoring parameters, or any substantial clinical entities.
+      - Ensure that you capture entities across different levels of detail, from high-level pathophysiological overviews to specific pharmacokinetic parameters and dosing specifications, to create a comprehensive representation of the clinical subject matter.
       - Choose names for entities that are specific enough to indicate their meaning without additional context, avoiding overly generic terms.
       - Consolidate similar entities to avoid redundancy, ensuring each represents a distinct concept at appropriate granularity levels.
-      - For each entity, extract relevant metadata including entity type (component, feature, process, tool, concept, etc.) and other structured attributes that provide context.
+      - For each entity, extract relevant metadata including entity type (drug, receptor, pathway, condition, procedure, biomarker, etc.) and other structured clinical attributes such as therapeutic class, mechanism of action, dosing parameters, contraindications, or monitoring requirements.
 
     2. Establish Typed Relationships with Confidence Scores:
       - Carefully examine the text to identify all relationships between clearly-related entities, ensuring each relationship is correctly captured with accurate details about the interactions.
       - Analyze the context and interactions between the identified entities to determine how they are interconnected, focusing on actions, associations, dependencies, or similarities.
       - Clearly define the relationships, ensuring accurate directionality that reflects the logical or functional dependencies among entities.
       - Classify each relationship using semantic types:
-        * 'hypernym' - broader concept (e.g., "Database" is hypernym of "TiDB")
-        * 'hyponym' - narrower concept (e.g., "TiKV" is hyponym of "Storage Engine") 
-        * 'meronym' - part-of relationship (e.g., "TiKV" is meronym of "TiDB Cluster")
-        * 'holonym' - has-part relationship (e.g., "TiDB Cluster" is holonym of "TiKV")
-        * 'synonym' - equivalent concepts (e.g., "TiDB" synonym "TiDB Database")
-        * 'antonym' - opposite concepts 
-        * 'causal' - cause-effect relationships (e.g., "Index" causes "Fast Query")
-        * 'temporal' - time-based relationships (e.g., "Migration" before "Upgrade")
-        * 'dependency' - requires/depends-on (e.g., "TiDB" depends on "TiKV")
-        * 'reference' - mentioned-in/cites (e.g., "Documentation" references "Feature")
+        * 'hypernym' - broader concept (e.g., "Vasopressor" is hypernym of "Norepinephrine")
+        * 'hyponym' - narrower concept (e.g., "Alpha-1 Agonist" is hyponym of "Adrenergic Agonist") 
+        * 'meronym' - part-of relationship (e.g., "Cardiac Output" is meronym of "Hemodynamic Status")
+        * 'holonym' - has-part relationship (e.g., "Cardiovascular System" is holonym of "Myocardium")
+        * 'synonym' - equivalent concepts (e.g., "Epinephrine" synonym "Adrenaline")
+        * 'antonym' - opposite concepts (e.g., "Vasodilation" antonym "Vasoconstriction")
+        * 'causal' - cause-effect relationships (e.g., "Sepsis" causes "Hypotension")
+        * 'temporal' - time-based relationships (e.g., "Fluid Resuscitation" before "Vasopressor Initiation")
+        * 'dependency' - requires/depends-on (e.g., "Invasive Monitoring" depends on "Central Venous Access")
+        * 'reference' - mentioned-in/cites (e.g., "Clinical Guidelines" references "Dosing Protocol")
         * 'generic' - other relationships not fitting above categories
       - Assign confidence scores (0.0-1.0) based on text clarity: 0.9+ for explicit statements, 0.7-0.8 for clear implications, 0.5-0.6 for inferences.
 
@@ -154,7 +154,7 @@ class ExtractKnowledgeGraph(dspy.Signature):
       - Ensure all extracted information is factual and verifiable within the text itself.
       - Cross-reference entities and relationships to maintain consistency and accuracy.
 
-    Objective: Produce a detailed and comprehensive knowledge graph that captures entities with rich metadata and semantically typed relationships with confidence scores, enabling high-quality graph construction and retrieval.
+    Objective: Produce a detailed and comprehensive knowledge graph that captures clinical entities with rich pharmacological metadata and semantically typed relationships with confidence scores, enabling high-quality medical knowledge graph construction and retrieval for critical care applications.
 
     Please only response in JSON format.
     """

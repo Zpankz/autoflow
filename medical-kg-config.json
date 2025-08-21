@@ -1,0 +1,63 @@
+{
+  "enhanced_kg_config": {
+    "enable_enhanced_kg": true,
+    "entity_distance_threshold": 0.85,
+    "preserve_case_entities": [
+      "SOFA",
+      "DIC",
+      "MAP",
+      "WHO",
+      "PR",
+      "CVP",
+      "MAOI",
+      "ACE",
+      "APACHE",
+      "FDA",
+      "MODS",
+      "CCB",
+      "ESC",
+      "IO",
+      "SSRI",
+      "CKD",
+      "SQ",
+      "ICU",
+      "ACCP",
+      "ARDS",
+      "NSAID",
+      "AKI",
+      "SL",
+      "SCCM",
+      "ECMO",
+      "PCWP",
+      "IM",
+      "AHA",
+      "IV",
+      "IABP",
+      "SVR",
+      "SIRS",
+      "ARB",
+      "PO",
+      "ET"
+    ],
+    "medical_domain_focus": true,
+    "therapeutic_relationship_weights": {
+      "therapeutic_effect": 0.9,
+      "contraindication": 0.85,
+      "drug_interaction": 0.8,
+      "pharmacokinetic_pathway": 0.75,
+      "monitoring_parameter": 0.7
+    }
+  },
+  "medical_sample_queries": [
+    "What are the pharmacokinetic parameters of vasopressors in septic shock?",
+    "How do alpha-adrenergic agonists affect systemic vascular resistance?",
+    "What are the monitoring parameters for norepinephrine therapy?",
+    "How does vasopressin differ from catecholamine vasopressors?",
+    "What are the contraindications for high-dose epinephrine?",
+    "How does sepsis alter drug clearance and distribution?",
+    "What are the hemodynamic targets in distributive shock?",
+    "How do inotropes differ from vasopressors in mechanism?",
+    "What biomarkers indicate adequate tissue perfusion?",
+    "How should vasopressors be weaned in recovering patients?"
+  ]
+}

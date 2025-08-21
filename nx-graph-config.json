@@ -1,0 +1,67 @@
+{
+  "projectGraph": {
+    "version": "21.4.0",
+    "projects": {
+      "core": {
+        "type": "library",
+        "dependencies": [],
+        "focus": "knowledge_graph_enhancements",
+        "files": [
+          "core/autoflow/configs/knowledge_graph.py",
+          "core/autoflow/storage/graph_store/tidb_graph_store.py", 
+          "core/autoflow/knowledge_graph/index.py",
+          "core/autoflow/knowledge_graph/programs/extract_graph.py",
+          "core/autoflow/knowledge_graph/extractors/simple.py"
+        ]
+      },
+      "backend": {
+        "type": "application", 
+        "dependencies": ["core"],
+        "focus": "application_integration",
+        "files": [
+          "backend/app/rag/knowledge_base/index_store.py",
+          "backend/app/rag/indices/knowledge_graph/",
+          "backend/app/alembic/versions/f4e8c1d92b5a_kg_enhancements.py"
+        ]
+      },
+      "frontend": {
+        "type": "application",
+        "dependencies": ["backend"],
+        "focus": "medical_ui_components",
+        "files": [
+          "frontend/app/src/components/graph/GraphEditor.tsx"
+        ]
+      }
+    },
+    "medicalDomainIntegration": {
+      "primaryFocus": "biophysical_pharmacophysiology",
+      "clinicalContext": "critical_care_medicine",
+      "sampleQueries": [
+        "What are the pharmacokinetic parameters of vasopressors in septic shock?",
+        "How do alpha-adrenergic agonists affect systemic vascular resistance?",
+        "What are the monitoring parameters for norepinephrine therapy?",
+        "How does vasopressin differ from catecholamine vasopressors?",
+        "What are the contraindications for high-dose epinephrine?"
+      ],
+      "medicalFixtures": [
+        "core/examples/medical_fixtures/critical_care_pharmacology.md",
+        "core/examples/medical_fixtures/septic_shock_management.md", 
+        "core/examples/medical_fixtures/pharmacokinetics_models.md"
+      ]
+    },
+    "deepgraphIntegration": {
+      "analysisQueries": [
+        "knowledge graph components dependency analysis",
+        "pharmacological entity extraction patterns",
+        "medical relationship typing effectiveness",
+        "critical care protocol knowledge representation"
+      ],
+      "codebaseMapping": {
+        "kgCore": "core/autoflow/knowledge_graph/",
+        "storage": "core/autoflow/storage/graph_store/",
+        "backend": "backend/app/rag/indices/knowledge_graph/",
+        "medical_content": "core/examples/medical_fixtures/"
+      }
+    }
+  }
+}

@@ -4,7 +4,8 @@
     "version": "21.4.0",
     "plugins": {
       "@nx/js": "21.4.0",
-      "@nx/workspace": "21.4.0"
+      "@nx/workspace": "21.4.0",
+      "@nx/devkit": "21.4.0"
     }
   },
   "namedInputs": {

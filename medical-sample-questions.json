@@ -1,0 +1,66 @@
+{
+  "critical_care_questions": [
+    {
+      "category": "vasopressor_pharmacology",
+      "questions": [
+        "What are the pharmacokinetic parameters of vasopressors in septic shock?",
+        "How do alpha-adrenergic agonists affect systemic vascular resistance?",
+        "What are the monitoring parameters for norepinephrine therapy?",
+        "How does vasopressin differ from catecholamine vasopressors?",
+        "What are the contraindications for high-dose epinephrine?"
+      ]
+    },
+    {
+      "category": "hemodynamic_monitoring", 
+      "questions": [
+        "What are the hemodynamic targets in distributive shock?",
+        "How should central venous pressure be interpreted in sepsis?",
+        "What biomarkers indicate adequate tissue perfusion?",
+        "How do you assess fluid responsiveness in shock patients?",
+        "What are the indications for invasive hemodynamic monitoring?"
+      ]
+    },
+    {
+      "category": "drug_dosing_protocols",
+      "questions": [
+        "How should vasopressors be weaned in recovering patients?",
+        "What are the dose-response relationships for norepinephrine?",
+        "How does sepsis alter drug clearance and distribution?",
+        "What are the pharmacokinetic changes in renal dysfunction?",
+        "How do you adjust dosing for hepatic impairment in ICU patients?"
+      ]
+    },
+    {
+      "category": "clinical_complications",
+      "questions": [
+        "How do you manage peripheral ischemia from vasopressors?",
+        "What are the cardiac effects of high-dose catecholamines?",
+        "How do you prevent extravasation injuries with vasopressors?",
+        "What are the drug interactions with common ICU medications?",
+        "How do you manage vasopressor-induced arrhythmias?"
+      ]
+    },
+    {
+      "category": "advanced_therapies",
+      "questions": [
+        "When should angiotensin II be considered in refractory shock?",
+        "What are the indications for inotropic support vs vasopressors?",
+        "How does ECMO affect drug pharmacokinetics?",
+        "What is the role of corticosteroids in vasopressor-dependent shock?",
+        "How do you approach catecholamine-resistant shock?"
+      ]
+    }
+  ],
+  "default_suggestions": [
+    "What are the pharmacokinetic parameters of vasopressors in septic shock?",
+    "How do alpha-adrenergic agonists affect systemic vascular resistance?",
+    "What are the monitoring parameters for norepinephrine therapy?",
+    "How does vasopressin differ from catecholamine vasopressors?",
+    "What are the contraindications for high-dose epinephrine?",
+    "What are the hemodynamic targets in distributive shock?",
+    "How should vasopressors be weaned in recovering patients?",
+    "How does sepsis alter drug clearance and distribution?",
+    "How do you manage peripheral ischemia from vasopressors?",
+    "When should angiotensin II be considered in refractory shock?"
+  ]
+}

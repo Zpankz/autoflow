@@ -92,8 +92,17 @@ class KnowledgeGraphConfig(BaseModel):
     
     # Normalization Settings
     preserve_case_entities: set[str] = Field(
-        default_factory=lambda: {"SQL", "API", "TiDB", "MySQL", "JSON", "XML", "HTTP", "HTTPS"},
-        description="Entity names that should preserve their original case"
+        default_factory=lambda: {
+            # Medical/Clinical Abbreviations
+            "ICU", "ARDS", "ECMO", "IABP", "CVP", "PCWP", "SVR", "MAP", 
+            "SOFA", "APACHE", "SIRS", "MODS", "DIC", "AKI", "CKD",
+            "IV", "IM", "SQ", "PO", "PR", "SL", "ET", "IO",
+            "ACE", "ARB", "CCB", "NSAID", "SSRI", "MAOI", "MAO", "COMT",
+            "FDA", "WHO", "ACCP", "SCCM", "AHA", "ESC", "NICE",
+            # Technical/Database (Legacy)
+            "SQL", "API", "JSON", "XML", "HTTP", "HTTPS"
+        },
+        description="Entity names that should preserve their original case (medical abbreviations and technical terms)"
     )
     
     def is_feature_enabled(self, feature_name: str) -> bool:
@@ -146,3 +155,4 @@ class KnowledgeGraphConfig(BaseModel):
         env_prefix = "KG_"
         case_sensitive = False
         validate_assignment = True
+

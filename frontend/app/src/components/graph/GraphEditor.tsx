@@ -20,7 +20,7 @@ import { createPortal } from 'react-dom';
 import useSWR from 'swr';
 
 export function GraphEditor ({ knowledgeBaseId }: { knowledgeBaseId: number }) {
-  const [query, setQuery] = useSearchParam('query', 'sample-question:What is TiDB?');
+  const [query, setQuery] = useSearchParam('query', 'sample-question:What are the pharmacokinetic parameters of vasopressors in septic shock?');
   const [graphStyle, setGraphStyle] = useState<'new' | 'legacy'>('new');
 
   const [key, fetcher] = getFetchInfo(knowledgeBaseId, query);
@@ -77,13 +77,13 @@ export function GraphEditor ({ knowledgeBaseId }: { knowledgeBaseId: number }) {
 }
 
 function SubgraphSelector ({ knowledgeBaseId, query, onQueryChange }: { knowledgeBaseId: number, query: string | null, onQueryChange: (query: string) => void }) {
-  const [initialType = 'sample-question', initialInput = 'What is TiDB?'] = parseQuery(query) ?? [];
+  const [initialType = 'sample-question', initialInput = 'What are the pharmacokinetic parameters of vasopressors in septic shock?'] = parseQuery(query) ?? [];
 
   const [type, setType] = useState<string>(initialType);
   const [input, setInput] = useState<string>(initialInput);
 
   useEffect(() => {
-    const [type = 'sample-question', input = 'What is TiDB?'] = parseQuery(query) ?? [];
+    const [type = 'sample-question', input = 'What are the pharmacokinetic parameters of vasopressors in septic shock?'] = parseQuery(query) ?? [];
     setType(type);
     setInput(input);
   }, [query]);

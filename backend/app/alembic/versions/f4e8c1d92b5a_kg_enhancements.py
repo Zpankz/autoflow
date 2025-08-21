@@ -149,3 +149,4 @@ def downgrade():
             print(f"Warning: Could not remove columns from {table_name}: {e}")
     
     # ### end Alembic commands ###
+

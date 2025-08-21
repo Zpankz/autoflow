@@ -16,7 +16,10 @@
   "devDependencies": {
     "@nx/js": "21.4.0",
     "@nx/workspace": "21.4.0",
-    "nx": "21.4.0"
+    "nx": "21.4.0",
+    "d3": "^7.9.0",
+    "cytoscape": "^3.30.3",
+    "@nx/devkit": "21.4.0"
   },
   "workspaces": [
     "frontend",
